@@ -29,6 +29,7 @@ RT_TASK th_niveauBatterie;
 RT_TASK th_camera;
 RT_TASK th_image;
 RT_TASK th_perte_info;
+RT_TASK th_watchdog;
 
 // Déclaration des priorités des taches
 int PRIORITY_TSERVER = 30;
@@ -41,11 +42,13 @@ int PRIORITY_TNIVEAUBATTERIE = 5;
 int PRIORITY_TCAMERA = 5;
 int PRIORITY_TIMAGE = 5;
 int PRIORITY_TPERTEINFO = 5;
+int PRIORITY_WATCHDOG=5;
 
 RT_MUTEX mutex_cameraStarted;
 RT_MUTEX mutex_robotStarted;
 RT_MUTEX mutex_move;
 RT_MUTEX mutex_etat_communication;
+RT_MUTEX mutex_Cmpt;
 
 // Déclaration des sémaphores
 RT_SEM sem_barrier;
@@ -54,6 +57,7 @@ RT_SEM sem_serverOk;
 RT_SEM sem_startRobot;
 RT_SEM sem_position;
 RT_SEM sem_arena;
+RT_SEM sem_watchdog;
 
 // Déclaration des files de message
 RT_QUEUE q_messageToMon;
@@ -122,6 +126,12 @@ void initStruct(void) {
         printf("Error mutex create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
      }   
+	
+     if (err = rt_mutex_create(&mutex_Cmpt, NULL)) {
+        printf("Error mutex create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
+	
     /* Creation du semaphore */
     if (err = rt_sem_create(&sem_barrier, NULL, 0, S_FIFO)) {
         printf("Error semaphore create: %s\n", strerror(-err));
@@ -145,6 +155,11 @@ void initStruct(void) {
     }
     if (err = rt_sem_create(&sem_arena, NULL, 0, S_FIFO)) {   // rajoutéJ
         printf("Error semaphore create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
+	
+    if (err = rt_sem_create(&sem_watchdog, NULL, 0, S_FIFO))
+	{        printf("Error semaphore create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
 
@@ -179,6 +194,11 @@ void initStruct(void) {
         exit(EXIT_FAILURE);
     }
 	if (err = rt_task_create(&th_perte_info, "th_perte_info", 0, PRIORITY_TPERTEINFO, 0)) {
+        printf("Error task create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
+	
+	if (err = rt_task_create(&th_watchdog, "th_perte_info", 0, PRIORITY_WATCHDOG, 0)) {
         printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
@@ -225,6 +245,10 @@ void startTasks() {
         exit(EXIT_FAILURE);
     }
 	if (err = rt_task_start(&th_perte_info, &f_perte_info, NULL)) {
+        printf("Error task start: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
+	if (err = rt_task_start(&th_watchdog, &f_watchdog, NULL)) {
         printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
